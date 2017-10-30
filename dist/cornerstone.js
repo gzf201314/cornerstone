@@ -3726,6 +3726,11 @@ function putImageLoadObject(imageId, imageLoadObject) {
     cachedImage.sharedCacheKey = image.sharedCacheKey;
 
     purgeCacheIfNecessary();
+  }, function () {
+    var cachedImage = imageCacheDict[imageId];
+
+    cachedImages.splice(cachedImages.indexOf(cachedImage), 1);
+    delete imageCacheDict[imageId];
   });
 }
 
@@ -3753,10 +3758,6 @@ function removeImageLoadObject(imageId) {
 
   if (cachedImage === undefined) {
     throw new Error('removeImageLoadObject: imageId was not present in imageCache');
-  }
-
-  if (cachedImage.imageLoadObject.cancelFn) {
-    cachedImage.imageLoadObject.cancelFn();
   }
 
   cachedImages.splice(cachedImages.indexOf(cachedImage), 1);
@@ -6119,6 +6120,14 @@ function loadImageFromImageLoader(imageId, options) {
   imageLoadObject.promise.then(function (image) {
     _externalModules.external.$(_events2.default).trigger('CornerstoneImageLoaded', { image: image });
     (0, _triggerEvent2.default)(_events2.default, 'CornerstoneImageLoaded', { image: image });
+  }, function (error) {
+    var errorObject = {
+      imageId: imageId,
+      error: error
+    };
+
+    _externalModules.external.$(_events2.default).trigger('CornerstoneImageLoadFailed', errorObject);
+    (0, _triggerEvent2.default)(_events2.default, 'CornerstoneImageLoadFailed', errorObject);
   });
 
   return imageLoadObject;

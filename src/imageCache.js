@@ -123,6 +123,11 @@ export function putImageLoadObject (imageId, imageLoadObject) {
     cachedImage.sharedCacheKey = image.sharedCacheKey;
 
     purgeCacheIfNecessary();
+  }, () => {
+    const cachedImage = imageCacheDict[imageId];
+
+    cachedImages.splice(cachedImages.indexOf(cachedImage), 1);
+    delete imageCacheDict[imageId];
   });
 }
 
@@ -150,10 +155,6 @@ export function removeImageLoadObject (imageId) {
 
   if (cachedImage === undefined) {
     throw new Error('removeImageLoadObject: imageId was not present in imageCache');
-  }
-
-  if (cachedImage.imageLoadObject.cancelFn) {
-    cachedImage.imageLoadObject.cancelFn();
   }
 
   cachedImages.splice(cachedImages.indexOf(cachedImage), 1);

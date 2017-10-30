@@ -42,6 +42,14 @@ function loadImageFromImageLoader (imageId, options) {
   imageLoadObject.promise.then(function (image) {
     external.$(events).trigger('CornerstoneImageLoaded', { image });
     triggerEvent(events, 'CornerstoneImageLoaded', { image });
+  }, function (error) {
+    const errorObject = {
+      imageId,
+      error
+    };
+
+    external.$(events).trigger('CornerstoneImageLoadFailed', errorObject);
+    triggerEvent(events, 'CornerstoneImageLoadFailed', errorObject);
   });
 
   return imageLoadObject;
