@@ -36,7 +36,6 @@ function generateNonLinearVOILUT (voiLUT) {
   const maxValue = voiLUT.lut[voiLUT.lut.length - 1] >> shift;
   const maxValueMapped = voiLUT.firstValueMapped + voiLUT.lut.length - 1;
 
-
   return function (modalityLutValue) {
     if (modalityLutValue < voiLUT.firstValueMapped) {
       return minValue;
@@ -52,9 +51,9 @@ function generateNonLinearVOILUT (voiLUT) {
  * Retrieve a VOI LUT mapping function given the current windowing settings
  * and the VOI LUT for the image
  *
- * @param {Number} windowWidth Window Width
- * @param {Number} windowCenter Window Center
- * @param {LUT} voiLUT Volume of Interest Lookup Table Object
+ * @param {Number} [windowWidth] Window Width
+ * @param {Number} [windowCenter] Window Center
+ * @param {LUT} [voiLUT] Volume of Interest Lookup Table Object
  *
  * @return {VOILUTFunction} VOI LUT mapping function
  */

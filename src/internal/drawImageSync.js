@@ -3,6 +3,7 @@ import now from './now.js';
 import drawCompositeImage from './drawCompositeImage.js';
 import { renderColorImage } from '../rendering/renderColorImage.js';
 import { renderGrayscaleImage } from '../rendering/renderGrayscaleImage.js';
+import { renderPseudoColorImage } from '../rendering/renderPseudoColorImage';
 import triggerEvent from '../triggerEvent.js';
 
 /**
@@ -39,7 +40,13 @@ export default function (enabledElement, invalidated) {
     let render = image.render;
 
     if (!render) {
-      render = image.color ? renderColorImage : renderGrayscaleImage;
+      if (enabledElement.viewport.colormap) {
+        render = renderPseudoColorImage;
+      } else if (image.color) {
+        render = renderColorImage;
+      } else {
+        render = renderGrayscaleImage;
+      }
     }
 
     render(enabledElement, invalidated);

@@ -1,6 +1,6 @@
 import { getEnabledElement } from './enabledElements.js';
 import pixelDataToFalseColorData from './pixelDataToFalseColorData.js';
-import { getColormap } from './colors/colormap.js';
+import colors from './colors/index.js';
 
 /**
  * Retrieves the minimum and maximum pixel values from an Array of pixel data
@@ -58,13 +58,13 @@ function getRestoreImageMethod (image) {
     image.windowCenter = windowCenter;
     image.minPixelValue = minPixelValue;
     image.maxPixelValue = maxPixelValue;
+    image.windowWidth = 255;
+    image.windowCenter = 127;
 
     if (image.origPixelData) {
       const pixelData = image.origPixelData;
 
-      image.getPixelData = function () {
-        return pixelData;
-      };
+      image.getPixelData = () => pixelData;
     }
 
     // Remove some attributes added by false color mapping
@@ -86,7 +86,7 @@ function getRestoreImageMethod (image) {
  */
 function ensuresColormap (colormap) {
   if (colormap && (typeof colormap === 'string')) {
-    colormap = getColormap(colormap);
+    colormap = colors.getColormap(colormap);
   }
 
   return colormap;
@@ -110,6 +110,7 @@ function restoreImage (image) {
 
 /**
  * Convert an image to a false color image
+ *
  * @param {Image} image A Cornerstone Image Object
  * @param {String|Object} colormap - it can be a colormap object or a colormap id (string)
  *

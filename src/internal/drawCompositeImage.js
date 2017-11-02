@@ -1,26 +1,11 @@
 import { getLayers, getActiveLayer, getVisibleLayers } from '../layers.js';
 import { addColorLayer } from '../rendering/renderColorImage.js';
 import { addGrayscaleLayer } from '../rendering/renderGrayscaleImage.js';
-import { convertImageToFalseColorImage, restoreImage } from '../falseColorMapping.js';
+import { addPseudoColorLayer } from '../rendering/renderPseudoColorImage';
 import setToPixelCoordinateSystem from '../setToPixelCoordinateSystem.js';
-
+import cloneViewportPositionParameters from './cloneViewportPositionParameters.js';
 // This is used to keep each of the layers' viewports in sync with the active layer
 const syncedViewports = {};
-
-// Create a copy of the properties that will be cached when syncing viewports
-function cloneViewport (viewport) {
-  return {
-    rotation: viewport.rotation,
-    scale: viewport.scale,
-    translation: {
-      x: viewport.translation.x,
-      y: viewport.translation.y
-    },
-    hflip: viewport.hflip,
-    vflip: viewport.vflip
-  };
-}
-
 
 // Sync all viewports based on active layer's viewport
 function syncViewports (layers, activeLayer) {
@@ -32,7 +17,7 @@ function syncViewports (layers, activeLayer) {
       return;
     }
 
-    const activeLayerSyncedViewport = syncedViewports[activeLayer.layerId];
+    const activeLayerSyncedViewport = syncedViewports[activeLayer.layerId] || activeLayer.viewport;
     const currentLayerSyncedViewport = syncedViewports[layer.layerId] || layer.viewport;
     const viewportRatio = currentLayerSyncedViewport.scale / activeLayerSyncedViewport.scale;
 
@@ -53,56 +38,27 @@ function syncViewports (layers, activeLayer) {
  * Internal function to render all layers for a Cornerstone enabled element
  *
  * @param {CanvasRenderingContext2D} context Canvas context to draw upon
- * @param {EnabledElementLayer} activeLayer The active layer
  * @param {EnabledElementLayer[]} layers The array of all layers for this enabled element
  * @param {Boolean} invalidated A boolean whether or not this image has been invalidated and must be redrawn
  * @returns {void}
  */
-function renderLayers (context, activeLayer, layers, invalidated) {
-  const canvas = context.canvas;
-
+function renderLayers (context, layers, invalidated) {
   // Loop through each layer and draw it to the canvas
   layers.forEach((layer) => {
-    context.save();
-
     if (!layer.image) {
       return;
     }
 
+    context.save();
+
     // Set the layer's canvas to the pixel coordinate system
-    layer.canvas = canvas;
+    layer.canvas = context.canvas;
     setToPixelCoordinateSystem(layer, context);
 
-    // Convert the image to false color image if layer.options.colormap
-    // exists or try to restore the original pixel data otherwise
-    let pixelDataUpdated;
-
-    if (layer.options.colormap && layer.image.colormapId !== layer.options.colormap) {
-      // If the options for this layer specify a colormap, but the image
-      // in the layer does not yet have this colormap set, convert
-      // the pixel data to this colormap and update the viewport.
-      pixelDataUpdated = convertImageToFalseColorImage(layer.image, layer.options.colormap);
-      layer.viewport.voi = {
-        windowWidth: layer.image.windowWidth,
-        windowCenter: layer.image.windowCenter
-      };
-    } else if (!layer.options.colormap && layer.image.colormapId) {
-      // If the image for this layer still has a colormapId, but the
-      // colormap has been removed from the options for this layer,
-      // undo the conversion from the original pixel data to the false
-      // color mapped pixel data and update the viewport.
-      pixelDataUpdated = restoreImage(layer.image);
-      layer.viewport.voi = {
-        windowWidth: layer.image.windowWidth,
-        windowCenter: layer.image.windowCenter
-      };
-    }
-
-    // If the image got updated it needs to be re-rendered
-    invalidated = invalidated || pixelDataUpdated;
-
     // Render into the layer's canvas
-    if (layer.image.color === true) {
+    if (layer.viewport.colormap || layer.options.colormap) {
+      addPseudoColorLayer(layer, invalidated);
+    } else if (layer.image.color === true) {
       addColorLayer(layer, invalidated);
     } else {
       addGrayscaleLayer(layer, invalidated);
@@ -121,17 +77,13 @@ function renderLayers (context, activeLayer, layers, invalidated) {
 
     // Set the pixelReplication property before drawing from the layer into the
     // composite canvas
-    if (layer.viewport.pixelReplication === true) {
-      context.imageSmoothingEnabled = false;
-      context.mozImageSmoothingEnabled = false;
-    } else {
-      context.imageSmoothingEnabled = true;
-      context.mozImageSmoothingEnabled = true;
-    }
+    context.imageSmoothingEnabled = !layer.viewport.pixelReplication;
+    context.mozImageSmoothingEnabled = context.imageSmoothingEnabled;
 
     // Draw from the current layer's canvas onto the enabled element's canvas
-    context.drawImage(layer.canvas, 0, 0, layer.image.width, layer.image.height, 0, 0, layer.image.width, layer.image.height);
+    const { width, height } = layer.image;
 
+    context.drawImage(layer.canvas, 0, 0, width, height, 0, 0, width, height);
     context.restore();
   });
 }
@@ -158,7 +110,7 @@ export default function (enabledElement, invalidated) {
   // copies to calculate anything later (ratio, translation offset, rotation offset, etc)
   if (resynced) {
     allLayers.forEach(function (layer) {
-      syncedViewports[layer.layerId] = cloneViewport(layer.viewport);
+      syncedViewports[layer.layerId] = cloneViewportPositionParameters(layer.viewport);
     });
   }
 
@@ -177,5 +129,5 @@ export default function (enabledElement, invalidated) {
   context.fillRect(0, 0, enabledElement.canvas.width, enabledElement.canvas.height);
 
   // Render all visible layers
-  renderLayers(context, activeLayer, visibleLayers, invalidated);
+  renderLayers(context, visibleLayers, invalidated);
 }

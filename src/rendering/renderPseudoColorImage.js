@@ -1,11 +1,11 @@
-import storedPixelDataToCanvasImageData from '../internal/storedPixelDataToCanvasImageData.js';
 import setToPixelCoordinateSystem from '../setToPixelCoordinateSystem.js';
 import now from '../internal/now.js';
-import webGL from '../webgl/index.js';
-import getLut from './getLut.js';
-import doesImageNeedToBeRendered from './doesImageNeedToBeRendered.js';
 import initializeRenderCanvas from './initializeRenderCanvas.js';
+import getLut from './getLut.js';
 import saveLastRendered from './saveLastRendered.js';
+import doesImageNeedToBeRendered from './doesImageNeedToBeRendered.js';
+import storedPixelDataToCanvasImageDataWithColorLUT from '../internal/storedPixelDataToCanvasImageDataWithColorLUT';
+import colors from '../colors/index.js';
 
 function getRenderCanvas (enabledElement, image, invalidated) {
   if (!enabledElement.renderingTools.renderCanvas) {
@@ -14,7 +14,21 @@ function getRenderCanvas (enabledElement, image, invalidated) {
 
   const renderCanvas = enabledElement.renderingTools.renderCanvas;
 
-  if (doesImageNeedToBeRendered(enabledElement, image) === false && invalidated !== true) {
+  // TODO: Deprecate enabledElement.options.colormap
+  let colormap = enabledElement.viewport.colormap || enabledElement.options.colormap;
+
+  if (colormap && (typeof colormap === 'string')) {
+    colormap = colors.getColormap(colormap);
+  }
+
+  if (!colormap) {
+    throw new Error('renderPseudoColorImage: colormap not found.');
+  }
+
+  const colormapId = colormap.getId();
+
+  if (doesImageNeedToBeRendered(enabledElement, image) === false && invalidated !== true &&
+    enabledElement.renderingTools.colormapId === colormapId) {
     return renderCanvas;
   }
 
@@ -29,14 +43,23 @@ function getRenderCanvas (enabledElement, image, invalidated) {
   let start = now();
   const lut = getLut(image, enabledElement.viewport, invalidated);
 
+  if (!enabledElement.renderingTools.colorLut || invalidated ||
+       enabledElement.renderingTools.colormapId !== colormapId) {
+    colormap.setNumberOfColors(255);
+    enabledElement.renderingTools.colorLut = colormap.createLookupTable();
+    enabledElement.renderingTools.colorLut.setTableRange(0, 255);
+    enabledElement.renderingTools.colorLut.build();
+    enabledElement.renderingTools.colormapId = colormapId;
+  }
+
   image.stats = image.stats || {};
   image.stats.lastLutGenerateTime = now() - start;
 
+  const colorLut = enabledElement.renderingTools.colorLut;
   const renderCanvasData = enabledElement.renderingTools.renderCanvasData;
   const renderCanvasContext = enabledElement.renderingTools.renderCanvasContext;
 
-  // Gray scale image - apply the lut and put the resulting image onto the render canvas
-  storedPixelDataToCanvasImageData(image, lut, renderCanvasData.data);
+  storedPixelDataToCanvasImageDataWithColorLUT(image, lut, colorLut, renderCanvasData.data);
 
   start = now();
   renderCanvasContext.putImageData(renderCanvasData, 0, 0);
@@ -46,13 +69,13 @@ function getRenderCanvas (enabledElement, image, invalidated) {
 }
 
 /**
- * API function to draw a grayscale image to a given enabledElement
+ * API function to draw a pseudo-color image to a given enabledElement
  *
  * @param {EnabledElement} enabledElement The Cornerstone Enabled Element to redraw
  * @param {Boolean} invalidated - true if pixel data has been invalidated and cached rendering should not be used
  * @returns {void}
  */
-export function renderGrayscaleImage (enabledElement, invalidated) {
+export function renderPseudoColorImage (enabledElement, invalidated) {
   if (enabledElement === undefined) {
     throw new Error('drawImage: enabledElement parameter must not be undefined');
   }
@@ -79,18 +102,11 @@ export function renderGrayscaleImage (enabledElement, invalidated) {
   // Save the canvas context state and apply the viewport properties
   setToPixelCoordinateSystem(enabledElement, context);
 
-  let renderCanvas;
 
-  if (enabledElement.options && enabledElement.options.renderer &&
-    enabledElement.options.renderer.toLowerCase() === 'webgl') {
-    // If this enabled element has the option set for WebGL, we should
-    // User it as our renderer.
-    renderCanvas = webGL.renderer.render(enabledElement);
-  } else {
-    // If no options are set we will retrieve the renderCanvas through the
-    // Normal Canvas rendering path
-    renderCanvas = getRenderCanvas(enabledElement, image, invalidated);
-  }
+  // If no options are set we will retrieve the renderCanvas through the
+  // Normal Canvas rendering path
+  // TODO: Add WebGL support for pseudocolor pipeline
+  const renderCanvas = getRenderCanvas(enabledElement, image, invalidated);
 
   context.drawImage(renderCanvas, 0, 0, image.width, image.height, 0, 0, image.width, image.height);
 
@@ -98,21 +114,21 @@ export function renderGrayscaleImage (enabledElement, invalidated) {
 }
 
 /**
- * API function to draw a grayscale image to a given layer
+ * API function to draw a pseudo-color image to a given layer
  *
  * @param {EnabledElementLayer} layer The layer that the image will be added to
  * @param {Boolean} invalidated - true if pixel data has been invaldiated and cached rendering should not be used
  * @returns {void}
  */
-export function addGrayscaleLayer (layer, invalidated) {
+export function addPseudoColorLayer (layer, invalidated) {
   if (layer === undefined) {
-    throw new Error('addGrayscaleLayer: layer parameter must not be undefined');
+    throw new Error('addPseudoColorLayer: layer parameter must not be undefined');
   }
 
   const image = layer.image;
 
   if (image === undefined) {
-    throw new Error('addGrayscaleLayer: image must be loaded before it can be drawn');
+    throw new Error('addPseudoColorLayer: image must be loaded before it can be drawn');
   }
 
   layer.canvas = getRenderCanvas(layer, image, invalidated);

@@ -8,7 +8,6 @@ import { Transform } from './transform.js';
  * @return {Transform} The current transform
  */
 export default function (enabledElement, scale) {
-
   const transform = new Transform();
 
   transform.translate(enabledElement.canvas.width / 2, enabledElement.canvas.height / 2);

@@ -31,6 +31,7 @@ export default function (element) {
     hflip: viewport.hflip,
     vflip: viewport.vflip,
     modalityLUT: viewport.modalityLUT,
-    voiLUT: viewport.voiLUT
+    voiLUT: viewport.voiLUT,
+    colormap: viewport.colormap
   };
 }
