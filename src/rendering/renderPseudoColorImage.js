@@ -41,16 +41,21 @@ function getRenderCanvas (enabledElement, image, invalidated) {
 
   // Get the lut to use
   let start = now();
-  const lut = getLut(image, enabledElement.viewport, invalidated);
 
   if (!enabledElement.renderingTools.colorLut || invalidated ||
        enabledElement.renderingTools.colormapId !== colormapId) {
-    colormap.setNumberOfColors(255);
+    colormap.setNumberOfColors(256);
     enabledElement.renderingTools.colorLut = colormap.createLookupTable();
-    enabledElement.renderingTools.colorLut.setTableRange(0, 255);
-    enabledElement.renderingTools.colorLut.build();
     enabledElement.renderingTools.colormapId = colormapId;
+
+    enabledElement.viewport.voi = {
+      windowCenter: 127,
+      windowWidth: 255
+    };
   }
+
+  const lut = getLut(image, enabledElement.viewport, invalidated);
+
 
   image.stats = image.stats || {};
   image.stats.lastLutGenerateTime = now() - start;

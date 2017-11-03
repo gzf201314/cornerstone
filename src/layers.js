@@ -5,7 +5,6 @@ import metaData from './metaData.js';
 import getDefaultViewport from './internal/getDefaultViewport.js';
 import updateImage from './updateImage.js';
 import triggerCustomEvent from './triggerEvent.js';
-import cloneViewportPositionParameters from './internal/cloneViewportPositionParameters.js';
 
 /**
  * Helper function to trigger an event on a Cornerstone element with
@@ -81,20 +80,12 @@ export function addLayer (element, image, options) {
   const layerId = guid();
   const enabledElement = getEnabledElement(element);
   const layers = enabledElement.layers;
-  const defaultViewport = getDefaultViewport(enabledElement.canvas, image);
-  let viewport = cloneViewportPositionParameters(defaultViewport);
+  let viewport = getDefaultViewport(enabledElement.canvas, image);
 
   // Override the defaults if any optional viewport settings
   // have been specified
   if (options && options.viewport) {
     viewport = Object.assign(viewport, options.viewport);
-  }
-
-  if (viewport.voi === undefined) {
-    viewport.voi = {
-      windowCenter: image.windowCenter || 127,
-      windowWidth: image.windowWidth || 255
-    };
   }
 
   // Set syncViewports to true by default when a new layer is added
