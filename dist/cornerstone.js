@@ -1600,6 +1600,7 @@ exports.default = function (enabledElement, image) {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports.rescaleImage = rescaleImage;
 exports.addLayer = addLayer;
 exports.removeLayer = removeLayer;
 exports.getLayer = getLayer;
@@ -3691,6 +3692,12 @@ Object.defineProperty(exports, 'getActiveLayer', {
   enumerable: true,
   get: function get() {
     return _layers.getActiveLayer;
+  }
+});
+Object.defineProperty(exports, 'rescaleImage', {
+  enumerable: true,
+  get: function get() {
+    return _layers.rescaleImage;
   }
 });
 

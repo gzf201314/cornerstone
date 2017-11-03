@@ -36,7 +36,8 @@ export {
   getLayers,
   getVisibleLayers,
   setActiveLayer,
-  getActiveLayer
+  getActiveLayer,
+  rescaleImage
 } from './layers.js';
 
 export { default as fitToWindow } from './fitToWindow.js';

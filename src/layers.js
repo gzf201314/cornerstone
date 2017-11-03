@@ -40,7 +40,7 @@ function triggerEvent (eventName, enabledElement, layerId) {
  * @param {EnabledElementLayer} targetLayer The target layer to rescale
  * @returns {void}
  */
-function rescaleImage (baseLayer, targetLayer) {
+export function rescaleImage (baseLayer, targetLayer) {
   const baseImage = baseLayer.image;
   const targetImage = targetLayer.image;
 
